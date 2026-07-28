@@ -66,6 +66,27 @@ header{
 .skey{display:flex; justify-content:space-between; font-size:10px; color:var(--muted);
   letter-spacing:.06em; padding:8px 14px 12px; max-width:640px; margin:0 auto;}
 
+/* summary bar, used when the deck is too big for one tick per card */
+.sumbar{display:flex; height:12px; gap:1px; padding:0 14px; max-width:640px; margin:6px auto 0; cursor:default;}
+.seg{height:100%;}
+.seg[data-k="got"]{background:var(--got);}
+.seg[data-k="shaky"]{background:var(--shaky);}
+.seg[data-k="miss"]{background:var(--miss);}
+.seg[data-k="none"]{background:var(--rule);}
+.legend{display:flex; gap:12px; flex-wrap:wrap; font-size:10px; color:var(--muted);
+  letter-spacing:.05em; padding:8px 14px 4px; max-width:640px; margin:0 auto;}
+.legend i{display:inline-block; width:8px; height:8px; margin-right:5px; font-style:normal;}
+.legend i[data-k="got"]{background:var(--got);}
+.legend i[data-k="shaky"]{background:var(--shaky);}
+.legend i[data-k="miss"]{background:var(--miss);}
+
+/* shows how you rated this card last time */
+.mark{display:inline-block; font-size:10px; letter-spacing:.12em; text-transform:uppercase;
+  padding:4px 8px; margin:0 0 0 16px; border:1px solid currentColor;}
+.mark[data-k="got"]{color:var(--got);}
+.mark[data-k="shaky"]{color:var(--shaky);}
+.mark[data-k="miss"]{color:var(--miss);}
+
 /* card */
 .card{background:var(--card); border:1px solid var(--rule); margin-top:14px; position:relative;}
 .obj{position:absolute; top:0; right:0; font-size:10px; letter-spacing:.1em; color:#fff;
@@ -435,7 +456,16 @@ var DOMAINS=[{n:1,l:"1.0 Concepts"},{n:2,l:"2.0 Threats"},{n:3,l:"3.0 Architectu
 var KEY="secplus-sy0701-progress";
 var EXAM=new Date("2026-09-01T09:00:00");
 
-var S={mode:"cards", doms:[1,2,3,4,5,6], weak:false, i:0, shown:false, picked:null, r:{}};
+var S={mode:"cards", doms:[1,2,3,4,5,6], weak:false, i:0, shown:false, picked:null, r:{},
+       order:null, orderFor:null};
+
+/* Fisher-Yates. Options are stored answer-first in the data, so they must be
+   shuffled on display or position becomes a giveaway. */
+function shuffled(n){
+  var a=[]; for(var i=0;i<n;i++) a.push(i);
+  for(var i=n-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; }
+  return a;
+}
 
 /* storage: Claude artifact storage -> localStorage -> memory */
 var store={
@@ -477,7 +507,7 @@ function weakCount(){ var n=0; for(var k in S.r){ if(S.r[k]==="shaky"||S.r[k]===
 
 function go(d){
   var dk=deck(); if(!dk.length) return;
-  S.i=(S.i+d+dk.length)%dk.length; S.shown=false; S.picked=null; render();
+  S.i=(S.i+d+dk.length)%dk.length; S.shown=false; S.picked=null; S.orderFor=null; render();
   window.scrollTo({top:0,behavior:"auto"});
 }
 function rate(k){
@@ -505,15 +535,34 @@ function render(){
   h+='<button class="chip" data-weak="1" data-on="'+(S.weak?1:0)+'">&#9733; Weak only ('+weakCount()+')</button>';
   ch.innerHTML=h;
 
-  /* spine */
+  /* progress: per-card ticks when the deck is small enough to see them,
+     otherwise a proportional summary bar */
   var sp=document.getElementById("spine"), s="";
-  for(var i=0;i<dk.length;i++){
-    s+='<button class="tick" data-jump="'+i+'" data-r="'+(S.r[dk[i].id]||"")+'" data-cur="'+(i===S.i?1:0)+'"></button>';
+  var tally={got:0,shaky:0,miss:0,none:0};
+  for(var i=0;i<dk.length;i++){ var rr=S.r[dk[i].id]; tally[rr?rr:"none"]++; }
+
+  if(dk.length && dk.length<=60){
+    sp.className="spine";
+    for(var i=0;i<dk.length;i++){
+      s+='<button class="tick" data-jump="'+i+'" data-r="'+(S.r[dk[i].id]||"")+'" data-cur="'+(i===S.i?1:0)+'"></button>';
+    }
+    sp.innerHTML=s;
+  } else {
+    sp.className="sumbar";
+    ["got","shaky","miss","none"].forEach(function(k){
+      if(tally[k]>0) s+='<div class="seg" data-k="'+k+'" style="flex:'+tally[k]+'"></div>';
+    });
+    sp.innerHTML=s;
   }
-  sp.innerHTML=s;
-  var rated=0; dk.forEach(function(x){ if(S.r[x.id]) rated++; });
+
   document.getElementById("skey").innerHTML=
-    "<span>"+(dk.length?S.i+1:0)+" / "+dk.length+"</span><span>"+rated+" rated</span>";
+    '<span>'+(dk.length?S.i+1:0)+' / '+dk.length+' in deck</span>'+
+    '<span class="legend" style="padding:0">'+
+      '<span><i data-k="got"></i>'+tally.got+'</span>'+
+      '<span><i data-k="shaky"></i>'+tally.shaky+'</span>'+
+      '<span><i data-k="miss"></i>'+tally.miss+'</span>'+
+      '<span>'+tally.none+' new</span>'+
+    '</span>';
 
   var m=document.getElementById("main"), bar=document.getElementById("bar");
 
@@ -524,10 +573,14 @@ function render(){
   }
 
   if(S.mode==="cards"){
+    var prev=S.r[c.id];
+    var badge = prev ? '<div class="mark" data-k="'+prev+'">Last: '+
+      (prev==="got"?"Got it":prev==="shaky"?"Shaky":"Missed")+'</div>' : '';
     m.innerHTML='<article class="card">'+
       '<div class="obj">'+esc(c.o)+'</div>'+
       '<div class="eyebrow">Objective '+esc(c.o)+'</div>'+
       '<h2 class="front">'+esc(c.f)+'</h2>'+
+      badge+
       (S.shown ? '<div class="back">'+esc(c.b)+'</div>'
                : '<button class="veil" id="veil">Tap to reveal</button>')+
       '</article>';
@@ -542,12 +595,21 @@ function render(){
       document.querySelectorAll("[data-rate]").forEach(function(b){ b.setAttribute("data-k", b.dataset.rate); });
     }
   } else {
+    var pv=S.r[c.id];
+    var pbadge = (pv && S.picked===null) ? '<div class="mark" data-k="'+pv+'">Last: '+
+      (pv==="got"?"Correct":"Missed")+'</div>' : '';
     var o='<article class="card"><div class="obj">'+c.d+'.0</div>'+
       '<div class="eyebrow">Which one is it</div>'+
-      '<h2 class="front">'+esc(c.q)+'</h2></article>';
-    c.opts.forEach(function(t,ix){
-      var st=""; if(S.picked!==null){ st = ix===c.a?"right":(ix===S.picked?"wrong":"dim"); }
-      o+='<button class="opt" data-pick="'+ix+'" data-s="'+st+'"'+(S.picked!==null?" disabled":"")+'>'+esc(t)+'</button>';
+      '<h2 class="front">'+esc(c.q)+'</h2>'+pbadge+'</article>';
+
+    /* new shuffle each time you arrive at the card; frozen once answered */
+    if(S.orderFor!==c.id || !S.order){ S.order=shuffled(c.opts.length); S.orderFor=c.id; }
+
+    S.order.forEach(function(realIx, dispIx){
+      var st="";
+      if(S.picked!==null){ st = realIx===c.a ? "right" : (realIx===S.picked ? "wrong" : "dim"); }
+      o+='<button class="opt" data-pick="'+realIx+'" data-s="'+st+'"'+
+         (S.picked!==null?" disabled":"")+'>'+esc(c.opts[realIx])+'</button>';
     });
     if(S.picked!==null) o+='<div class="tell"><span>How to tell them apart</span>'+esc(c.tell)+'</div>';
     m.innerHTML=o;
@@ -562,14 +624,14 @@ function render(){
 /* events (delegated) */
 document.addEventListener("click", function(e){
   var t=e.target.closest("button"); if(!t) return;
-  if(t.dataset.mode){ S.mode=t.dataset.mode; S.i=0; S.shown=false; S.picked=null; return render(); }
+  if(t.dataset.mode){ S.mode=t.dataset.mode; S.i=0; S.shown=false; S.picked=null; S.orderFor=null; return render(); }
   if(t.dataset.dom){
     var n=+t.dataset.dom, ix=S.doms.indexOf(n);
     if(ix>=0){ if(S.doms.length>1) S.doms.splice(ix,1); } else S.doms.push(n);
-    S.i=0; S.shown=false; S.picked=null; return render();
+    S.i=0; S.shown=false; S.picked=null; S.orderFor=null; return render();
   }
-  if(t.dataset.weak){ S.weak=!S.weak; S.i=0; S.shown=false; S.picked=null; return render(); }
-  if(t.dataset.jump){ S.i=+t.dataset.jump; S.shown=false; S.picked=null; return render(); }
+  if(t.dataset.weak){ S.weak=!S.weak; S.i=0; S.shown=false; S.picked=null; S.orderFor=null; return render(); }
+  if(t.dataset.jump){ S.i=+t.dataset.jump; S.shown=false; S.picked=null; S.orderFor=null; return render(); }
   if(t.id==="veil"||t.dataset.reveal){ S.shown=true; return render(); }
   if(t.dataset.rate) return rate(t.dataset.rate);
   if(t.dataset.nav) return go(+t.dataset.nav);

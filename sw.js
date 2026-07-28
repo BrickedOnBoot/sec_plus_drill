@@ -1,5 +1,5 @@
 /* Caches the app on first visit so it works with no signal. */
-var CACHE = 'secplus-v2';
+var CACHE = 'secplus-v4';
 var FILES = ['./', './index.html', './manifest.json', './icon-180.png', './icon-512.png'];
 
 self.addEventListener('install', function (e) {
