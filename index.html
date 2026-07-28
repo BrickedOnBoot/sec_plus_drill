@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="SY0-701">
+<meta name="theme-color" content="#EEF0F3">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icon-180.png">
+<title>SY0-701 Drill</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap');
+
+:root{
+  --paper:#EEF0F3; --card:#FFF; --ink:#141C26; --muted:#69747F;
+  --rule:#D3D8DE; --signal:#4B37D4; --signal-soft:#EDEAFB;
+  --got:#12736A; --shaky:#B8761B; --miss:#A5323F;
+  --mono:'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --serif:'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --bar: calc(76px + env(safe-area-inset-bottom));
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{margin:0; padding:0;}
+body{
+  background:var(--paper); color:var(--ink); font-family:var(--mono);
+  -webkit-font-smoothing:antialiased; overscroll-behavior-y:contain;
+  padding-bottom:var(--bar);
+}
+button{font-family:inherit; color:inherit;}
+.wrap{max-width:640px; margin:0 auto; padding:0 14px;}
+
+/* header */
+header{
+  position:sticky; top:0; z-index:20; background:var(--paper);
+  padding-top:env(safe-area-inset-top); border-bottom:1px solid var(--rule);
+}
+.hrow{display:flex; justify-content:space-between; align-items:baseline; padding:14px 14px 10px; max-width:640px; margin:0 auto;}
+.title{font-size:12px; font-weight:600; letter-spacing:.14em; text-transform:uppercase;}
+.days{font-size:11px; color:var(--muted); letter-spacing:.05em;}
+.days b{color:var(--signal);}
+
+.tabs{display:flex; max-width:640px; margin:0 auto; border-top:1px solid var(--rule);}
+.tab{flex:1; padding:13px 4px; font-size:11px; letter-spacing:.12em; text-transform:uppercase;
+  background:none; border:none; color:var(--muted); cursor:pointer;}
+.tab+.tab{border-left:1px solid var(--rule);}
+.tab[data-on="1"]{background:var(--ink); color:#fff;}
+
+/* filters: horizontal scroller */
+.chips{display:flex; gap:6px; overflow-x:auto; padding:12px 14px 10px; max-width:640px; margin:0 auto;
+  scrollbar-width:none; -webkit-overflow-scrolling:touch;}
+.chips::-webkit-scrollbar{display:none;}
+.chip{flex:0 0 auto; font-size:11px; padding:9px 12px; border:1px solid var(--rule);
+  background:var(--card); color:var(--muted); border-radius:0; cursor:pointer; letter-spacing:.03em;}
+.chip[data-on="1"]{border-color:var(--signal); color:var(--signal); background:var(--signal-soft);}
+
+/* spine */
+.spine{display:flex; gap:2px; height:16px; align-items:flex-end; padding:0 14px; max-width:640px; margin:6px auto 0;}
+.tick{flex:1 1 0; min-width:1px; height:6px; background:var(--rule); border:none; padding:0; cursor:pointer;}
+.tick[data-r="got"]{background:var(--got);}
+.tick[data-r="shaky"]{background:var(--shaky);}
+.tick[data-r="miss"]{background:var(--miss);}
+.tick[data-cur="1"]{height:16px; background:var(--ink);}
+.skey{display:flex; justify-content:space-between; font-size:10px; color:var(--muted);
+  letter-spacing:.06em; padding:8px 14px 12px; max-width:640px; margin:0 auto;}
+
+/* card */
+.card{background:var(--card); border:1px solid var(--rule); margin-top:14px; position:relative;}
+.obj{position:absolute; top:0; right:0; font-size:10px; letter-spacing:.1em; color:#fff;
+  background:var(--ink); padding:5px 8px;}
+.eyebrow{font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); padding:15px 16px 0;}
+.front{font-family:var(--serif); font-size:20px; line-height:1.35; padding:9px 16px 18px; font-weight:600; margin:0;}
+.back{font-family:var(--serif); font-size:17px; line-height:1.5; padding:16px; border-top:1px solid var(--rule); background:#FBFBFD;}
+.veil{width:100%; padding:22px 16px; border:none; border-top:1px dashed var(--rule); background:none;
+  font-size:11px; letter-spacing:.14em; color:var(--muted); text-transform:uppercase; cursor:pointer;}
+
+/* pairs */
+.opt{display:block; width:100%; text-align:left; font-family:var(--serif); font-size:16px;
+  padding:16px; background:var(--card); border:1px solid var(--rule); margin-top:8px; cursor:pointer;}
+.opt[data-s="right"]{border-color:var(--got); background:#F0F8F6;}
+.opt[data-s="wrong"]{border-color:var(--miss); background:#FBF1F2;}
+.opt[data-s="dim"]{opacity:.42;}
+.tell{margin-top:14px; border-left:3px solid var(--signal); background:var(--card); padding:14px 16px;
+  font-family:var(--serif); font-size:15px; line-height:1.5;}
+.tell span{display:block; font-family:var(--mono); font-size:10px; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--signal); margin-bottom:6px;}
+
+/* bottom action bar */
+.bar{position:fixed; left:0; right:0; bottom:0; z-index:30; background:var(--paper);
+  border-top:1px solid var(--rule); padding:10px 14px calc(10px + env(safe-area-inset-bottom));
+  display:flex; gap:8px; max-width:640px; margin:0 auto;}
+.act{flex:1; font-size:11px; letter-spacing:.08em; text-transform:uppercase; padding:16px 4px;
+  border:1px solid var(--ink); background:var(--card); cursor:pointer; min-height:52px;}
+.act:active{transform:translateY(1px);}
+.act[data-k="got"]{border-color:var(--got); color:var(--got);}
+.act[data-k="shaky"]{border-color:var(--shaky); color:var(--shaky);}
+.act[data-k="miss"]{border-color:var(--miss); color:var(--miss);}
+.act[data-k="reveal"]{background:var(--ink); color:#fff; border-color:var(--ink); flex:2;}
+
+.empty{padding:44px 16px; text-align:center; font-size:13px; color:var(--muted); line-height:1.7;}
+footer{padding:20px 14px 30px; max-width:640px; margin:0 auto; display:flex;
+  justify-content:space-between; align-items:center; font-size:10px; color:var(--muted);
+  border-top:1px solid var(--rule); margin-top:22px;}
+.link{background:none; border:none; color:var(--signal); font-size:10px; padding:6px; cursor:pointer;}
+.note{font-size:11px; color:var(--muted); line-height:1.6; padding:0 14px; max-width:640px; margin:0 auto 10px;}
+:focus-visible{outline:2px solid var(--signal); outline-offset:2px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hrow">
+    <div class="title">SY0-701 Drill</div>
+    <div class="days" id="days"></div>
+  </div>
+  <div class="tabs">
+    <button class="tab" data-mode="cards">Flashcards</button>
+    <button class="tab" data-mode="pairs">Pairs drill</button>
+  </div>
+</header>
+
+<div class="chips" id="chips"></div>
+<div class="spine" id="spine"></div>
+<div class="skey" id="skey"></div>
+
+<main class="wrap" id="main"></main>
+
+<p class="note">Swipe left or right to move between cards. Progress saves on this device.</p>
+<footer class="wrap">
+  <span id="fcount"></span>
+  <button class="link" id="reset">Reset progress</button>
+</footer>
+
+<div class="bar" id="bar"></div>
+
+<script>
+var CARDS = [
+  // ---------------- DOMAIN 1 ----------------
+  { d: 1, o: "1.1", f: "The four control categories", b: "Technical (tech enforces it), Managerial (policy/planning), Operational (people doing day-to-day tasks), Physical (locks, guards, fences)." },
+  { d: 1, o: "1.1", f: "Backup procedures, user training, incident handling — which category?", b: "Operational. A human executes it as a routine task. Contrast with Managerial, which is the decision to require it." },
+  { d: 1, o: "1.1", f: "The six control types by function", b: "Preventive, Deterrent, Detective, Corrective, Compensating, Directive." },
+  { d: 1, o: "1.1", f: "A login banner warning of prosecution — control type?", b: "Deterrent. It discourages the attempt; it does not physically stop it." },
+  { d: 1, o: "1.1", f: "Antivirus quarantining a file after infection — control type?", b: "Corrective. It acts after detection to limit damage and restore state." },
+  { d: 1, o: "1.1", f: "A system can't support MFA, so you add a stricter password policy and extra monitoring", b: "Compensating. An alternative used when the primary control isn't feasible." },
+  { d: 1, o: "1.1", f: "Acceptable use policy, standards, procedures — control type?", b: "Directive. Tells people what they must do; sets the stage for other controls." },
+  { d: 1, o: "1.2", f: "CIA triad", b: "Confidentiality (only authorized eyes), Integrity (data unaltered and trustworthy), Availability (accessible when needed)." },
+  { d: 1, o: "1.2", f: "Non-repudiation — what provides it?", b: "Proof the sender can't later deny the action. Delivered by digital signatures and thorough logging/auditing." },
+  { d: 1, o: "1.2", f: "AAA", b: "Authentication (who are you), Authorization (what may you do), Accounting (what did you do — logging and tracking)." },
+  { d: 1, o: "1.2", f: "Gap analysis", b: "Comparing your current security posture against a target standard or framework and documenting the difference." },
+  { d: 1, o: "1.2", f: "Zero trust: control plane components", b: "Adaptive identity, threat scope reduction, policy-driven access control, Policy Administrator, Policy Engine." },
+  { d: 1, o: "1.2", f: "Zero trust: data plane components", b: "Subject/system, implicit trust zones, Policy Enforcement Point." },
+  { d: 1, o: "1.2", f: "Policy Engine vs Policy Administrator vs PEP", b: "Engine decides (evaluates the request against policy). Administrator communicates the decision and issues/revokes access. PEP is the gate where it's actually enforced." },
+  { d: 1, o: "1.2", f: "Access control vestibule", b: "Two interlocking doors — one must close before the other opens. Defeats tailgating/piggybacking." },
+  { d: 1, o: "1.2", f: "Bollards", b: "Short vertical posts that stop vehicles from ramming a building. Physical, preventive." },
+  { d: 1, o: "1.2", f: "Four sensor types on the exam", b: "Infrared (body heat), Pressure (weight on a surface), Microwave (reflected signal detects movement), Ultrasonic (sound waves detect movement)." },
+  { d: 1, o: "1.2", f: "Honeypot / honeynet / honeyfile / honeytoken", b: "Pot = one decoy system. Net = a whole decoy network. File = a bait file. Token = a bait record with no real use, so any access is an alert." },
+  { d: 1, o: "1.3", f: "Change management: business elements", b: "Approval process, ownership, stakeholders, impact analysis, test results, backout plan, maintenance window, standard operating procedure." },
+  { d: 1, o: "1.3", f: "Backout plan", b: "The documented way to revert the change if it fails or introduces a vulnerability. Approve nothing without one." },
+  { d: 1, o: "1.3", f: "Maintenance window", b: "A scheduled period for changes so downtime is planned and staff are on hand to fix problems." },
+  { d: 1, o: "1.3", f: "Technical implications of a change", b: "Allow/deny list updates, restricted activities, downtime, service and application restarts, legacy applications, dependencies." },
+  { d: 1, o: "1.3", f: "Why version control matters to security", b: "It shows exactly what changed and when — critical for forensics, rollback, and tracing an introduced vulnerability." },
+  { d: 1, o: "1.4", f: "PKI", b: "The roles, policies, hardware, and procedures to create, manage, distribute, store, and revoke digital certificates and public/private key pairs." },
+  { d: 1, o: "1.4", f: "Key escrow", b: "A trusted third party holds a copy of keys so data can be recovered if the key is lost or a court compels access." },
+  { d: 1, o: "1.4", f: "Encryption levels, broad to narrow", b: "Full-disk → partition → volume → file → database → record." },
+  { d: 1, o: "1.4", f: "TPM vs HSM", b: "TPM: a chip on the motherboard of one device, stores that device's keys (used by BitLocker). HSM: a dedicated appliance managing keys for many systems at scale." },
+  { d: 1, o: "1.4", f: "Secure enclave", b: "An isolated area inside the processor for sensitive data and keys, walled off from the main CPU and OS." },
+  { d: 1, o: "1.4", f: "Steganography", b: "Hiding data inside other data — a message concealed in an image, audio, or video file. Concealment, not encryption." },
+  { d: 1, o: "1.4", f: "Tokenization", b: "Replacing sensitive data with a meaningless substitute token; the real value lives in a separate secure vault." },
+  { d: 1, o: "1.4", f: "Data masking", b: "Showing only part of the value — 'XXXX-XXXX-XXXX-4471'. The rest is hidden from the viewer." },
+  { d: 1, o: "1.4", f: "Salting", b: "Random data added before hashing so identical passwords produce different hashes. Kills rainbow tables." },
+  { d: 1, o: "1.4", f: "Key stretching", b: "Deliberately making key derivation slow and compute-heavy (PBKDF2, bcrypt) so brute force becomes impractical." },
+  { d: 1, o: "1.4", f: "What does a digital signature provide, and which key signs?", b: "Integrity, authenticity, and non-repudiation. The sender signs with their own private key; anyone verifies with the sender's public key." },
+  { d: 1, o: "1.4", f: "CSR", b: "Certificate Signing Request — what you send to a CA containing your public key and identifying details to request a certificate." },
+  { d: 1, o: "1.4", f: "Wildcard certificate", b: "Covers a domain and all its subdomains at one level (*.example.com). One cert, many hosts." },
+  { d: 1, o: "1.4", f: "Root of trust", b: "The anchor a security chain derives from — the root CA in PKI, or a hardware root like a TPM at boot." },
+
+  // ---------------- DOMAIN 2 ----------------
+  { d: 2, o: "2.1", f: "Threat actor attributes to compare", b: "Internal vs external, resources/funding, and level of sophistication/capability." },
+  { d: 2, o: "2.1", f: "Nation-state actor profile", b: "External, extremely well funded, highest sophistication. Motivations: espionage, war, data exfiltration. Often runs APTs." },
+  { d: 2, o: "2.1", f: "Unskilled attacker", b: "Low sophistication, low resources, uses prewritten tools and scripts. Motivated by chaos, revenge, or the thrill." },
+  { d: 2, o: "2.1", f: "Hacktivist", b: "Motivated by philosophical or political belief. Wants a message heard — defacement, leaks, service disruption." },
+  { d: 2, o: "2.1", f: "Shadow IT", b: "Internal, unsanctioned tools or services employees adopt to get work done. Not malicious — but unmonitored and unpatched." },
+  { d: 2, o: "2.1", f: "Motivations list", b: "Data exfiltration, espionage, service disruption, blackmail, financial gain, philosophical/political belief, ethical, revenge, disruption/chaos, war." },
+  { d: 2, o: "2.2", f: "Message-based threat vectors", b: "Email (phishing), SMS (smishing), instant messaging. Highest-volume vector overall." },
+  { d: 2, o: "2.2", f: "Supply chain vectors", b: "Managed service providers, vendors, and suppliers — compromise them and you inherit access to all their customers." },
+  { d: 2, o: "2.2", f: "Watering hole attack", b: "Compromise a site the target group is known to visit, and wait for them to come to you." },
+  { d: 2, o: "2.2", f: "Typosquatting", b: "Registering lookalike domains (goggle.com, arnazon.com) to catch mistyped traffic or make phishing links look legitimate." },
+  { d: 2, o: "2.2", f: "Business email compromise", b: "Impersonating an executive or trusted partner over email to push a wire transfer or data release. Usually urgent and authority-driven." },
+  { d: 2, o: "2.3", f: "Race condition / TOC-TOU", b: "The system's state changes between when a condition is checked and when it's used, letting an attacker slip in between the two." },
+  { d: 2, o: "2.3", f: "Buffer overflow", b: "Writing more data than the buffer holds, overwriting adjacent memory — often to redirect execution." },
+  { d: 2, o: "2.3", f: "Memory injection", b: "Inserting malicious code into the memory space of a running process." },
+  { d: 2, o: "2.3", f: "VM escape", b: "Code inside a guest VM breaks out and interacts with the hypervisor or host — the worst-case virtualization flaw." },
+  { d: 2, o: "2.3", f: "Resource reuse", b: "Memory or storage released by one tenant/process is handed to another with old data still readable." },
+  { d: 2, o: "2.3", f: "Zero-day", b: "A vulnerability unknown to the vendor with no patch available. No signature exists yet, so detection relies on behavior." },
+  { d: 2, o: "2.3", f: "Sideloading vs jailbreaking", b: "Sideloading installs apps from outside the official store. Jailbreaking/rooting removes the OS's built-in restrictions entirely." },
+  { d: 2, o: "2.4", f: "Ransomware indicators", b: "Files suddenly encrypted, extensions changed, ransom note displayed, backups targeted first." },
+  { d: 2, o: "2.4", f: "Worm vs virus behavior", b: "Worm self-replicates across the network with no user action. Virus attaches to a file or program and needs a user to run it." },
+  { d: 2, o: "2.4", f: "Rootkit", b: "Malware embedded at a deep level (kernel or firmware) that hides its own presence from the OS and AV." },
+  { d: 2, o: "2.4", f: "Logic bomb", b: "Dormant malicious code that fires on a condition — a date, a deletion of an HR record, a specific event." },
+  { d: 2, o: "2.4", f: "Bloatware", b: "Unwanted preinstalled software. Not malicious by design, but it expands the attack surface and drags performance." },
+  { d: 2, o: "2.4", f: "Impossible travel", b: "Successful logins from geographically distant locations closer together in time than travel allows. Classic account-compromise indicator." },
+  { d: 2, o: "2.4", f: "Concurrent session usage", b: "One account signed in from multiple places at once — shared or stolen credentials." },
+  { d: 2, o: "2.4", f: "Missing logs as an indicator", b: "Gaps or deletions in logging suggest an attacker covering tracks. Ship logs off-host so they can't be scrubbed." },
+  { d: 2, o: "2.4", f: "Downgrade attack", b: "Forcing a connection to fall back to a weaker protocol or cipher the attacker can break." },
+  { d: 2, o: "2.4", f: "Password spraying", b: "A few very common passwords tried across many accounts — stays under lockout thresholds. Brute force is many passwords against one account." },
+  { d: 2, o: "2.5", f: "Segmentation vs isolation", b: "Segmentation splits the network into zones to limit lateral movement. Isolation fully separates a system so a compromise can't touch anything else." },
+  { d: 2, o: "2.5", f: "Application allow list", b: "Only explicitly approved applications may execute. Everything else is blocked by default — the strongest anti-malware posture." },
+  { d: 2, o: "2.5", f: "Least privilege", b: "Users and processes get only the permissions the role requires, nothing extra. Limits both insider damage and attacker blast radius." },
+  { d: 2, o: "2.5", f: "Hardening techniques", b: "Encryption, endpoint protection, host-based firewall, HIPS, disable unused ports/protocols, change default passwords, remove unnecessary software." },
+  { d: 2, o: "2.5", f: "Configuration enforcement", b: "Continuously checking systems against the approved baseline and correcting drift automatically." },
+  { d: 2, o: "2.5", f: "Decommissioning", b: "Safely retiring a system: sanitize the data, remove it from inventory and monitoring, revoke its credentials and certificates." },
+
+  // ---------------- DOMAIN 3 ----------------
+  { d: 3, o: "3.1", f: "Cloud responsibility matrix", b: "The document defining which security duties belong to the provider and which stay with the customer. IaaS pushes the most onto you, SaaS the least." },
+  { d: 3, o: "3.1", f: "Infrastructure as Code security implication", b: "Deployments become consistent and repeatable — but one bad template propagates the same flaw everywhere, instantly." },
+  { d: 3, o: "3.1", f: "Serverless security implication", b: "No OS or servers to patch, but you're fully dependent on the provider and have far less visibility." },
+  { d: 3, o: "3.1", f: "Microservices security implication", b: "Isolation limits breach scope, but the volume of inter-service traffic and APIs is itself new attack surface." },
+  { d: 3, o: "3.1", f: "Air-gapped", b: "Physically isolated with no external network connection. Highest protection; data must move via removable media, which becomes the risk." },
+  { d: 3, o: "3.1", f: "SDN security implication", b: "Central programmatic control of traffic gives flexibility and speed — and a single high-value controller to misconfigure or compromise." },
+  { d: 3, o: "3.1", f: "ICS/SCADA risk", b: "Runs critical physical processes. Legacy, rarely patchable, and a breach can cause physical harm. Isolate rather than patch." },
+  { d: 3, o: "3.1", f: "RTOS and embedded systems", b: "Time-critical or purpose-built, minimal security features, hard or impossible to patch without downtime." },
+  { d: 3, o: "3.2", f: "Fail-open vs fail-closed", b: "Fail-open passes traffic when the device dies (availability wins). Fail-closed blocks traffic (security wins)." },
+  { d: 3, o: "3.2", f: "Active vs passive device", b: "Active sits in the traffic path and can block (firewall, IPS). Passive only observes a copy and alerts (IDS)." },
+  { d: 3, o: "3.2", f: "Jump server", b: "A hardened intermediate host that is the single controlled entry point for administering systems in a protected segment." },
+  { d: 3, o: "3.2", f: "Screened subnet", b: "The DMZ — a buffer segment holding public-facing services, separated from the internal network by firewalls." },
+  { d: 3, o: "3.2", f: "802.1X", b: "Port-based network access control. The device authenticates (via EAP, usually to a RADIUS server) before the switch port passes any traffic." },
+  { d: 3, o: "3.2", f: "WAF", b: "Inspects HTTP/HTTPS at layer 7 to block web attacks like SQLi and XSS. Protects the application, not the network." },
+  { d: 3, o: "3.2", f: "NGFW", b: "Deep packet inspection with application awareness, user identity, and integrated IPS — goes beyond port and protocol." },
+  { d: 3, o: "3.2", f: "SASE", b: "Secure Access Service Edge — networking (SD-WAN) and security (firewall, CASB, ZTNA) delivered together as a cloud service at the edge." },
+  { d: 3, o: "3.3", f: "Data classifications", b: "Sensitive, Confidential, Public, Restricted, Private, Critical." },
+  { d: 3, o: "3.3", f: "The three data states", b: "At rest (stored), in transit (moving across a network), in use (loaded in memory and being processed)." },
+  { d: 3, o: "3.3", f: "Data sovereignty", b: "Data is subject to the laws of the country where it physically resides — which drives geographic storage restrictions." },
+  { d: 3, o: "3.3", f: "Regulated vs trade secret data", b: "Regulated: law dictates how you handle it (GDPR, HIPAA, PCI). Trade secret: no law requires protection, but it's your competitive advantage." },
+  { d: 3, o: "3.4", f: "Hot vs warm vs cold site", b: "Hot: fully equipped and live-mirrored, switch over in minutes. Warm: hardware and connectivity ready, data needs restoring. Cold: an empty room with power." },
+  { d: 3, o: "3.4", f: "Geographic dispersion", b: "Placing recovery sites far enough apart that one regional disaster can't take out both." },
+  { d: 3, o: "3.4", f: "Platform diversity", b: "Using different vendors/technologies so a single vulnerability or vendor failure can't take down the whole environment." },
+  { d: 3, o: "3.4", f: "Capacity planning components", b: "People, technology, and infrastructure — enough of each to keep operating under load and during recovery." },
+  { d: 3, o: "3.4", f: "Four resilience test types", b: "Tabletop exercise (discussion), failover (actually switch over), simulation (mimic a real event), parallel processing (run both, compare output)." },
+  { d: 3, o: "3.4", f: "Journaling in backups", b: "Recording every change so you can restore to a precise point in time rather than just the last full backup." },
+  { d: 3, o: "3.4", f: "UPS vs generator", b: "UPS: instant battery power for a short bridge. Generator: sustained power for long outages, but takes time to start. You need both." },
+
+  // ---------------- DOMAIN 4 ----------------
+  { d: 4, o: "4.1", f: "Secure baseline lifecycle", b: "Establish (define the standard config), Deploy (push it everywhere), Maintain (review and update as threats change)." },
+  { d: 4, o: "4.1", f: "Site survey vs heat map", b: "Site survey examines the physical environment to place APs. Heat map is the visual output showing signal strength and coverage gaps." },
+  { d: 4, o: "4.1", f: "WPA3 improvement over WPA2", b: "Replaces the pre-shared key handshake with SAE (Simultaneous Authentication of Equals), which resists offline dictionary attacks and adds forward secrecy." },
+  { d: 4, o: "4.1", f: "Input validation", b: "Checking untrusted input against expected type, length, and format before processing. The primary defense against injection attacks." },
+  { d: 4, o: "4.1", f: "Code signing", b: "Developer signs software with their private key so users can verify it's authentic and unaltered since release." },
+  { d: 4, o: "4.1", f: "Sandboxing", b: "Running code in a restricted, isolated environment so it can be observed or contained without touching the real system." },
+  { d: 4, o: "4.2", f: "Sanitization vs destruction", b: "Sanitization wipes data so the media can be reused. Destruction physically ruins the media (shred, degauss, incinerate)." },
+  { d: 4, o: "4.2", f: "Certificate of destruction", b: "Documented proof from the disposal vendor that media was destroyed — needed for compliance and audit." },
+  { d: 4, o: "4.2", f: "Data retention policy", b: "Defines how long each data type is kept and mandates deletion after. Old data you don't need is pure liability." },
+  { d: 4, o: "4.3", f: "Static vs dynamic analysis", b: "Static reads the source code without running it. Dynamic tests the application while it executes (including fuzzing)." },
+  { d: 4, o: "4.3", f: "Package monitoring", b: "Watching third-party libraries and dependencies for newly disclosed vulnerabilities in the software you ship." },
+  { d: 4, o: "4.3", f: "CVE vs CVSS", b: "CVE is the identifier — a catalog entry naming one specific published vulnerability. CVSS is the 0–10 score rating its severity." },
+  { d: 4, o: "4.3", f: "False positive vs false negative", b: "False positive: an alert on something benign (wastes analyst time). False negative: a real threat that produced no alert (far more dangerous)." },
+  { d: 4, o: "4.3", f: "Exposure factor", b: "The percentage of an asset's value lost when a specific threat is realized. Feeds directly into SLE." },
+  { d: 4, o: "4.3", f: "Vulnerability response options", b: "Patch, segment, apply compensating controls, buy insurance (transfer), or formally accept via exception/exemption." },
+  { d: 4, o: "4.3", f: "Validating remediation", b: "Rescan, verify, and audit. You don't close the finding on the word of the person who fixed it." },
+  { d: 4, o: "4.4", f: "SCAP", b: "Security Content Automation Protocol — standardized formats so scanners and tools can exchange vulnerability and configuration data automatically." },
+  { d: 4, o: "4.4", f: "Alert tuning", b: "Adjusting thresholds and rules to cut false positives without losing real detections. Untuned alerts cause analyst fatigue." },
+  { d: 4, o: "4.4", f: "NetFlow", b: "Collects metadata about network conversations — who talked to whom, when, how much — without capturing packet contents." },
+  { d: 4, o: "4.4", f: "Agent vs agentless monitoring", b: "Agent: software installed on the host, deeper visibility, more to maintain. Agentless: nothing installed, easier to deploy, less depth." },
+  { d: 4, o: "4.5", f: "SPF, DKIM, DMARC together", b: "SPF lists who may send for your domain. DKIM signs the message so tampering shows. DMARC tells receivers what to do on failure and where to report." },
+  { d: 4, o: "4.5", f: "File integrity monitoring", b: "Baselines critical files and alerts when they change unexpectedly — catches rootkits, web shells, and config tampering." },
+  { d: 4, o: "4.5", f: "NAC", b: "Network Access Control — checks a device's identity and health/compliance before it's allowed onto the network." },
+  { d: 4, o: "4.5", f: "EDR vs XDR", b: "EDR monitors and responds on endpoints. XDR correlates endpoint data with network, email, cloud, and identity telemetry for a wider picture." },
+  { d: 4, o: "4.5", f: "User behavior analytics", b: "Baselines what normal looks like per user, then flags deviations — the signal for compromised accounts and insider threat." },
+  { d: 4, o: "4.6", f: "Identity proofing", b: "Verifying a person really is who they claim before you issue them credentials. Happens at onboarding, before provisioning." },
+  { d: 4, o: "4.6", f: "Federation", b: "Trusting another organization's identity provider so their users can access your resources without a separate account here." },
+  { d: 4, o: "4.6", f: "Attestation in IAM", b: "Periodic review where managers confirm each user's permissions are still appropriate. Catches privilege creep." },
+  { d: 4, o: "4.6", f: "The MFA factors", b: "Something you know, something you have, something you are — plus somewhere you are and something you do. Two of the SAME type is not MFA." },
+  { d: 4, o: "4.6", f: "Privileged access management tools", b: "Just-in-time permissions, password vaulting, and ephemeral credentials that expire after use. Admin rights are borrowed, not held." },
+  { d: 4, o: "4.7", f: "Automation benefits", b: "Efficiency, enforced baselines, standard configurations, secure scaling, employee retention, faster reaction time, workforce multiplier." },
+  { d: 4, o: "4.7", f: "Automation risks", b: "Complexity, upfront cost, single point of failure, technical debt, ongoing supportability as platforms change." },
+  { d: 4, o: "4.7", f: "Guard rails", b: "Automated boundaries that keep provisioning and operations inside approved policy — you can't deploy outside the lines." },
+  { d: 4, o: "4.8", f: "Incident response phases in order", b: "Preparation → Detection → Analysis → Containment → Eradication → Recovery → Lessons Learned." },
+  { d: 4, o: "4.8", f: "Containment vs eradication", b: "Containment stops the bleeding and limits spread. Eradication removes the root cause and cleans affected systems." },
+  { d: 4, o: "4.8", f: "Threat hunting", b: "Proactively searching for adversary activity that hasn't triggered any alert. Hypothesis-driven, not alert-driven." },
+  { d: 4, o: "4.8", f: "Chain of custody", b: "Documentation of every person who handled evidence, when, and why — without it the evidence is inadmissible." },
+  { d: 4, o: "4.8", f: "Legal hold", b: "A formal notice to preserve all data relevant to anticipated litigation. Normal deletion and retention schedules stop immediately." },
+  { d: 4, o: "4.8", f: "E-discovery", b: "The process of identifying, collecting, and producing electronic data as evidence in a legal case." },
+  { d: 4, o: "4.9", f: "Order of volatility (most volatile first)", b: "CPU registers/cache → RAM → temp files/swap → disk → remote logging → archival media. Collect in that order." },
+  { d: 4, o: "4.9", f: "What packet captures give an investigation", b: "Full payload content — what was actually sent. Flow data tells you a conversation happened; PCAP tells you what was said." },
+
+  // ---------------- DOMAIN 5 ----------------
+  { d: 5, o: "5.1", f: "Policy vs standard vs procedure vs guideline", b: "Policy: the mandatory high-level rule. Standard: the specific mandatory requirement. Procedure: the step-by-step how. Guideline: recommended, not mandatory." },
+  { d: 5, o: "5.1", f: "Data owner", b: "Usually a senior business role. Accountable for the data — its classification and who gets access." },
+  { d: 5, o: "5.1", f: "Data custodian / steward", b: "Technical role that implements the owner's decisions — handles storage, backups, and access enforcement day to day." },
+  { d: 5, o: "5.1", f: "Data controller vs processor", b: "Controller decides why and how personal data is processed. Processor acts only on the controller's instructions. GDPR language." },
+  { d: 5, o: "5.1", f: "Governance structures", b: "Boards, committees, government entities; and centralized vs decentralized decision-making." },
+  { d: 5, o: "5.2", f: "Risk assessment cadences", b: "Ad hoc (triggered by an event), recurring (scheduled), one-time (for a specific project), continuous (always-on, real-time feeds)." },
+  { d: 5, o: "5.2", f: "SLE, ARO, ALE formulas", b: "SLE = Asset Value × Exposure Factor. ALE = SLE × ARO. ARO is how many times per year you expect it." },
+  { d: 5, o: "5.2", f: "Qualitative vs quantitative risk analysis", b: "Qualitative uses subjective ratings (high/medium/low, heat maps). Quantitative uses real numbers and dollar figures (SLE/ARO/ALE)." },
+  { d: 5, o: "5.2", f: "Risk register contents", b: "Every identified risk plus key risk indicators, risk owners, and risk thresholds." },
+  { d: 5, o: "5.2", f: "Risk appetite categories", b: "Expansionary (takes more risk for growth), Conservative (avoids risk), Neutral." },
+  { d: 5, o: "5.2", f: "Four risk management strategies", b: "Transfer (insurance, outsource), Accept (live with it), Avoid (don't do the activity), Mitigate (add controls to reduce it)." },
+  { d: 5, o: "5.2", f: "RTO vs RPO", b: "RTO: how long you can be down before it's unacceptable (time to restore). RPO: how much data loss you can tolerate (how far back the last good backup can be)." },
+  { d: 5, o: "5.2", f: "MTTR vs MTBF", b: "MTTR: average time to repair after a failure. MTBF: average time between failures — a reliability measure." },
+  { d: 5, o: "5.3", f: "Right-to-audit clause", b: "A contract term letting you audit the vendor's security and operations yourself. Negotiate it before signing, not after a breach." },
+  { d: 5, o: "5.3", f: "Due diligence in vendor selection", b: "Investigating a vendor's financial health, reputation, history, and security posture before entering the agreement." },
+  { d: 5, o: "5.3", f: "MSA vs SOW", b: "MSA sets the general terms governing an ongoing relationship. SOW/WO specifies the deliverables, timeline, and scope of one particular engagement under it." },
+  { d: 5, o: "5.3", f: "SLA", b: "Defines the measurable level of service — uptime, response times, penalties. The one with numbers you can enforce." },
+  { d: 5, o: "5.3", f: "MOU vs MOA", b: "MOU states mutual understanding and intent, generally not binding. MOA is more formal and states agreed obligations and responsibilities." },
+  { d: 5, o: "5.3", f: "BPA", b: "Business Partners Agreement — terms between two organizations entering a shared venture: contributions, profit split, responsibilities." },
+  { d: 5, o: "5.3", f: "Rules of engagement", b: "Defines scope, timing, methods, and limits for an assessment or pen test — what's in bounds and who to call." },
+  { d: 5, o: "5.4", f: "Consequences of non-compliance", b: "Fines, sanctions, reputational damage, loss of license, contractual impacts." },
+  { d: 5, o: "5.4", f: "Due diligence vs due care", b: "Due diligence is the investigating and planning. Due care is actually acting on it — the ongoing prudent practice." },
+  { d: 5, o: "5.4", f: "Right to be forgotten", b: "A data subject's right to have their personal data erased on request. Central to GDPR; forces you to know where all copies live." },
+  { d: 5, o: "5.5", f: "Attestation", b: "A formal written declaration — typically by management or a third party — that stated conditions or controls are in place and accurate." },
+  { d: 5, o: "5.5", f: "Internal vs external audit", b: "Internal: your own staff or audit committee, for self-improvement and readiness. External: regulators or independent third parties, for impartial verification." },
+  { d: 5, o: "5.5", f: "Known / partially known / unknown environment", b: "Known: tester gets full information (white box). Partially known: some information (gray box). Unknown: nothing (black box)." },
+  { d: 5, o: "5.5", f: "Passive vs active reconnaissance", b: "Passive gathers information without touching the target (OSINT, WHOIS, social media). Active interacts directly (port scans, banner grabs) and can be detected." },
+  { d: 5, o: "5.6", f: "Anomalous behavior categories", b: "Risky (knowingly unsafe, like password sharing), Unexpected (unusual system or user activity), Unintentional (honest mistakes)." },
+  { d: 5, o: "5.6", f: "Security awareness program lifecycle", b: "Development → Execution → Reporting and monitoring (initial baseline, then recurring) → feed results back into development." },
+
+  // ---------------- REFERENCE: PORTS ----------------
+  { d: 6, o: "Ports", f: "Port 20 / 21", b: "FTP — 20 is data, 21 is control. Cleartext, including credentials. Replace with SFTP or FTPS." },
+  { d: 6, o: "Ports", f: "Port 22", b: "SSH — and SCP and SFTP ride on it. The secure answer for remote admin and file transfer." },
+  { d: 6, o: "Ports", f: "Port 23", b: "Telnet — cleartext remote access. If you see 23 open in a scan, the answer is almost always 'disable it, use SSH'." },
+  { d: 6, o: "Ports", f: "Port 25", b: "SMTP — mail transfer between servers, unencrypted. 587 is the modern submission port with STARTTLS; 465 is implicit TLS." },
+  { d: 6, o: "Ports", f: "Port 49 vs 1812/1813", b: "49 = TACACS+ (TCP, Cisco, encrypts the whole payload, separates AAA). 1812/1813 = RADIUS (UDP, encrypts only the password)." },
+  { d: 6, o: "Ports", f: "Port 53", b: "DNS — UDP for lookups, TCP for zone transfers. Watch for DNS tunneling and exfiltration over it." },
+  { d: 6, o: "Ports", f: "Port 67 / 68", b: "DHCP — 67 server, 68 client. Rogue DHCP servers are a classic on-path setup." },
+  { d: 6, o: "Ports", f: "Port 69", b: "TFTP — trivial FTP, UDP, no authentication at all. Used for network device configs and PXE boot." },
+  { d: 6, o: "Ports", f: "Port 80 vs 443", b: "80 = HTTP cleartext. 443 = HTTPS over TLS. Any 'should be encrypted in transit' question points at 443." },
+  { d: 6, o: "Ports", f: "Port 88", b: "Kerberos — the authentication protocol behind Active Directory. Ticket-based, uses a KDC." },
+  { d: 6, o: "Ports", f: "Port 110 / 995", b: "POP3 (110) and POP3S (995). POP downloads and typically deletes from the server." },
+  { d: 6, o: "Ports", f: "Port 143 / 993", b: "IMAP (143) and IMAPS (993). IMAP syncs and leaves mail on the server — better for multiple devices." },
+  { d: 6, o: "Ports", f: "Port 123", b: "NTP — time sync. Matters for security because accurate timestamps make log correlation and Kerberos work." },
+  { d: 6, o: "Ports", f: "Port 137 / 138 / 139", b: "NetBIOS — legacy Windows name and session services. Should be disabled on modern networks." },
+  { d: 6, o: "Ports", f: "Port 161 / 162", b: "SNMP — 161 for queries, 162 for traps. Use v3 only; v1 and v2c send community strings in cleartext." },
+  { d: 6, o: "Ports", f: "Port 389 vs 636", b: "LDAP (389) cleartext vs LDAPS (636) over TLS. Directory queries against AD." },
+  { d: 6, o: "Ports", f: "Port 445", b: "SMB — Windows file sharing. Should never be exposed to the internet; the WannaCry / EternalBlue port." },
+  { d: 6, o: "Ports", f: "Port 500", b: "ISAKMP / IKE — negotiates the IPSec security association before the VPN tunnel comes up. 4500 for NAT traversal." },
+  { d: 6, o: "Ports", f: "Port 514", b: "Syslog — sends log data to a central collector or SIEM. UDP by default, so delivery isn't guaranteed." },
+  { d: 6, o: "Ports", f: "Port 1433 / 3306", b: "1433 = Microsoft SQL Server. 3306 = MySQL. Databases should never be directly internet-facing." },
+  { d: 6, o: "Ports", f: "Port 3389", b: "RDP — Windows Remote Desktop. Extremely common ransomware entry point when exposed. Put it behind a VPN or jump server." },
+  { d: 6, o: "Ports", f: "Port 5060 / 5061", b: "SIP — VoIP call setup. 5061 is SIP over TLS. Media itself rides RTP/SRTP." },
+  { d: 6, o: "Ports", f: "The 'secure twin' pattern", b: "HTTP 80→443, FTP 21→22 (SFTP), Telnet 23→22, LDAP 389→636, POP 110→995, IMAP 143→993, SMTP 25→587/465. Learn the pairs, not the numbers alone." },
+
+  // ---------------- REFERENCE: ACRONYMS ----------------
+  { d: 6, o: "Acro", f: "PAM (both meanings)", b: "Privileged Access Management (vaulting, just-in-time admin rights) — and Pluggable Authentication Modules (the Linux auth framework). Context decides." },
+  { d: 6, o: "Acro", f: "SoC vs SOC", b: "SoC = System on Chip (hardware). SOC = Security Operations Center (the team). Capitalization is the only clue." },
+  { d: 6, o: "Acro", f: "RBAC (both meanings)", b: "Role-Based Access Control (permissions by job role) and Rule-Based Access Control (permissions by conditional rules, like an ACL or time window)." },
+  { d: 6, o: "Acro", f: "STIX vs TAXII", b: "STIX is the language — how threat intel is formatted. TAXII is the transport — how it's exchanged. STIX is the letter, TAXII is the mail truck." },
+  { d: 6, o: "Acro", f: "CASB", b: "Cloud Access Security Broker — sits between users and cloud services to enforce policy, spot shadow IT, and apply DLP to SaaS." },
+  { d: 6, o: "Acro", f: "SWG", b: "Secure Web Gateway — filters outbound web traffic, blocks malicious sites and malware downloads, enforces acceptable use." },
+  { d: 6, o: "Acro", f: "AIS", b: "Automated Indicator Sharing — the CISA program for exchanging threat indicators between government and private sector." },
+  { d: 6, o: "Acro", f: "SED vs FDE", b: "SED: Self-Encrypting Drive — encryption is done by the drive hardware itself. FDE: Full Disk Encryption — the concept, often software (BitLocker, LUKS)." },
+  { d: 6, o: "Acro", f: "HOTP vs TOTP", b: "HOTP is counter-based — the code stays valid until used. TOTP is time-based — it rolls every 30 seconds. TOTP is what your authenticator app uses." },
+  { d: 6, o: "Acro", f: "ESP vs AH in IPSec", b: "AH: authentication and integrity only, no encryption. ESP: encryption plus authentication. If confidentiality is required, it's ESP." },
+  { d: 6, o: "Acro", f: "Tunnel vs Transport mode (IPSec)", b: "Tunnel mode encrypts the entire original packet and adds a new header — used for site-to-site VPNs. Transport mode encrypts only the payload — host-to-host." },
+  { d: 6, o: "Acro", f: "BCP vs DRP vs COOP", b: "BCP: keep the whole business running. DRP: restore IT systems specifically. COOP: the government's term for continuity of essential functions." },
+  { d: 6, o: "Acro", f: "MSP vs MSSP", b: "MSP manages your IT generally. MSSP is the security-specific version — monitoring, SOC services, incident response." },
+  { d: 6, o: "Acro", f: "CCMP vs TKIP", b: "TKIP is the older WPA patch over WEP — deprecated. CCMP (AES-based) is what WPA2 uses. WPA3 uses SAE and GCMP." },
+  { d: 6, o: "Acro", f: "IoC", b: "Indicators of Compromise — the forensic artifacts (file hashes, IPs, registry keys, odd traffic) that say an intrusion happened." },
+  { d: 6, o: "Acro", f: "TTP", b: "Tactics, Techniques, and Procedures — how an adversary operates. Harder for an attacker to change than an IP or hash, so more durable for detection." },
+];
+var PAIRS = [
+  { d: 1, q: "A visible CCTV camera in the parking lot, meant to make people think twice", opts: ["Deterrent", "Detective", "Preventive"], a: 0, tell: "If it works by discouraging the attempt, it's deterrent. If it's recording for later review, that same camera is detective. Ask what job the question is emphasizing." },
+  { d: 1, q: "A firewall rule that blocks the traffic before it arrives", opts: ["Preventive", "Deterrent", "Corrective"], a: 0, tell: "Preventive actually stops the event. Deterrent only discourages someone who could still proceed." },
+  { d: 1, q: "Restoring from backup after a ransomware hit", opts: ["Corrective", "Detective", "Compensating"], a: 0, tell: "Corrective happens after the incident to fix or recover. Compensating is an alternative control put in place beforehand." },
+  { d: 1, q: "A risk assessment and the written security policy that follows it", opts: ["Managerial", "Operational", "Directive"], a: 0, tell: "Managerial is the category (who owns it: management). Directive is the type (what it does: tells people what to do). A policy is often both — read whether the question asks category or type." },
+  { d: 1, q: "One shared key encrypts and decrypts; fast, good for bulk data", opts: ["Symmetric", "Asymmetric"], a: 0, tell: "Symmetric = same key, fast, but key distribution is the problem. Asymmetric = key pair, slow, solves distribution. Real systems use asymmetric to exchange a symmetric key." },
+  { d: 1, q: "A one-way function producing a fixed-length value that can't be reversed", opts: ["Hashing", "Encryption", "Tokenization"], a: 0, tell: "If the question needs the data back, it's encryption. If it only needs to prove nothing changed, it's hashing." },
+  { d: 1, q: "Random value added before hashing so two identical passwords hash differently", opts: ["Salting", "Key stretching", "Nonce"], a: 0, tell: "Salt defeats precomputed rainbow tables. Key stretching defeats speed by making each guess computationally expensive. Different attacks." },
+  { d: 1, q: "Replacing a credit card number with a meaningless surrogate stored in a vault", opts: ["Tokenization", "Masking", "Steganography"], a: 0, tell: "Tokenization swaps the value entirely and can be reversed via the vault. Masking just hides part of the real value on screen." },
+  { d: 1, q: "A downloadable list a client checks to see if a certificate was revoked", opts: ["CRL", "OCSP", "CSR"], a: 0, tell: "CRL is a list you download (can be stale). OCSP is a real-time query about one certificate. OCSP stapling has the server present the proof for you." },
+  { d: 1, q: "A dedicated network appliance that generates and manages keys for many servers", opts: ["HSM", "TPM", "Secure enclave"], a: 0, tell: "HSM = shared appliance, enterprise scale. TPM = one chip on one motherboard, that device only." },
+  { d: 1, q: "Proving the sender cannot later deny having sent the message", opts: ["Non-repudiation", "Integrity", "Authentication"], a: 0, tell: "Integrity says the message didn't change. Non-repudiation says a specific person sent it and can't deny it. Digital signatures give both." },
+  { d: 1, q: "A file placed on a share purely so that any access to it raises an alert", opts: ["Honeyfile", "Honeypot", "Honeytoken"], a: 0, tell: "Honeyfile is a bait file. Honeytoken is a bait data record (a fake credential or DB row). Honeypot is a whole bait system." },
+  { d: 2, q: "A phone call claiming to be from the help desk, asking for your password", opts: ["Vishing", "Smishing", "Phishing"], a: 0, tell: "Voice = vishing. SMS = smishing. Email = phishing. Match the medium in the question stem." },
+  { d: 2, q: "Malware that spreads across the network by itself with no user interaction", opts: ["Worm", "Virus", "Trojan"], a: 0, tell: "Worm = self-propagating, no user needed. Virus = needs a host file and a user to execute it." },
+  { d: 2, q: "Software that appears to be a legitimate utility but opens remote access", opts: ["Trojan", "Rootkit", "Logic bomb"], a: 0, tell: "Trojan = deception at install. Rootkit = concealment after install, at kernel or firmware level." },
+  { d: 2, q: "Malicious code set to trigger when a specific employee's account is deleted", opts: ["Logic bomb", "Ransomware", "Worm"], a: 0, tell: "Logic bomb waits for a condition. If the question mentions a date, event, or trigger — that's the tell." },
+  { d: 2, q: "Three common passwords tried against 4,000 accounts to avoid lockouts", opts: ["Password spraying", "Brute force", "Credential replay"], a: 0, tell: "Spraying is wide and shallow (few passwords, many accounts). Brute force is narrow and deep (many passwords, one account)." },
+  { d: 2, q: "An attacker sits between two parties, reading and altering the traffic in real time", opts: ["On-path", "Replay", "Session hijacking"], a: 0, tell: "On-path is live interception. Replay captures valid traffic and re-sends it later — no live position required." },
+  { d: 2, q: "Exploiting the mathematical probability that two different inputs share a hash", opts: ["Birthday attack", "Collision", "Downgrade"], a: 0, tell: "The collision is the result — two inputs, one hash. The birthday attack is the method that exploits how likely collisions are." },
+  { d: 2, q: "Compromising an industry news site that the target company's engineers all read", opts: ["Watering hole", "Typosquatting", "Pretexting"], a: 0, tell: "Watering hole poisons a place the victims already go. Typosquatting waits for them to make a typing mistake." },
+  { d: 2, q: "Inventing a believable backstory — 'I'm the new auditor' — to extract information", opts: ["Pretexting", "Impersonation", "Brand impersonation"], a: 0, tell: "Pretexting is the invented scenario. Impersonation is claiming to be a specific person. They overlap; pretexting emphasizes the story." },
+  { d: 2, q: "A check passes, then the state changes before the resource is actually used", opts: ["TOC/TOU race condition", "Buffer overflow", "Memory injection"], a: 0, tell: "Race condition is about timing between two operations. Buffer overflow is about writing past an allocated boundary." },
+  { d: 2, q: "Code in a guest VM gains access to the hypervisor and other guests", opts: ["VM escape", "Resource reuse", "VM sprawl"], a: 0, tell: "Escape = breaking out of the guest. Resource reuse = leftover data leaking between tenants via recycled memory or storage." },
+  { d: 3, q: "The security appliance fails and traffic is blocked until it recovers", opts: ["Fail-closed", "Fail-open"], a: 0, tell: "Closed = deny by default, security prioritized. Open = allow by default, availability prioritized. Life safety systems fail open; data protection fails closed." },
+  { d: 3, q: "The device receives a copy of the traffic via a SPAN port and only alerts", opts: ["IDS (passive/tap)", "IPS (active/inline)"], a: 0, tell: "If it can drop the packet, it's inline and it's an IPS. If it only sees a copy, it can alert but never block." },
+  { d: 3, q: "Fully mirrored alternate facility, live data, switch over in minutes", opts: ["Hot site", "Warm site", "Cold site"], a: 0, tell: "Hot = ready now, most expensive. Warm = hardware ready, restore data first. Cold = space and power only, cheapest and slowest." },
+  { d: 3, q: "Several servers act as one unit; if one dies the others pick up its workload", opts: ["Clustering", "Load balancing"], a: 0, tell: "Clustering targets fault tolerance (failover). Load balancing targets performance (spreading traffic). Exam wording: 'if one fails' → clustering." },
+  { d: 3, q: "Encrypting the database column where SSNs are stored", opts: ["Data at rest", "Data in transit", "Data in use"], a: 0, tell: "Stored = at rest. Moving across a network = in transit. Loaded in RAM and being processed = in use (hardest to protect)." },
+  { d: 3, q: "Inspects HTTP requests for SQL injection before they reach the web app", opts: ["WAF", "NGFW", "UTM"], a: 0, tell: "WAF is application-specific, layer 7, web only. NGFW is a general network firewall with app awareness. UTM is many security functions bundled in one box." },
+  { d: 3, q: "Protocol suite that authenticates and encrypts IP packets, used for site-to-site VPNs", opts: ["IPSec", "TLS", "GRE"], a: 0, tell: "IPSec operates at layer 3 and secures everything above it. TLS is layer 4/above and secures a specific application session." },
+  { d: 4, q: "The scanner reported a critical flaw, but the system isn't actually vulnerable", opts: ["False positive", "False negative", "True positive"], a: 0, tell: "Positive/negative = what the tool said. True/false = whether it was right. A false negative is silent and far more dangerous." },
+  { d: 4, q: "The unique identifier assigned to a newly published vulnerability", opts: ["CVE", "CVSS", "CWE"], a: 0, tell: "CVE names it. CVSS scores it 0–10. If the question mentions severity or a number, it's CVSS." },
+  { d: 4, q: "Reviewing application source code for flaws without running the program", opts: ["Static analysis", "Dynamic analysis", "Fuzzing"], a: 0, tell: "Static reads code at rest. Dynamic runs it. Fuzzing is a dynamic technique — throwing malformed input at a running app." },
+  { d: 4, q: "Users log in once and reach several related applications without re-authenticating", opts: ["SSO", "Federation", "SAML"], a: 0, tell: "SSO is the user experience. Federation is SSO extended across organizational boundaries. SAML/OAuth are the protocols that implement it." },
+  { d: 4, q: "The protocol built for authorization — granting an app limited access without sharing your password", opts: ["OAuth", "SAML", "LDAP"], a: 0, tell: "OAuth = authorization (delegated access). SAML = authentication assertions between IdP and SP, common in enterprise SSO. OIDC adds identity on top of OAuth." },
+  { d: 4, q: "Access is granted based on the user's job title in the organization", opts: ["RBAC (role-based)", "ABAC (attribute-based)", "DAC (discretionary)"], a: 0, tell: "RBAC keys on role. ABAC evaluates multiple attributes (department AND location AND time AND device). If the question lists several conditions, it's ABAC." },
+  { d: 4, q: "The OS enforces access using security labels; users cannot change permissions", opts: ["MAC (mandatory)", "DAC (discretionary)", "RBAC"], a: 0, tell: "MAC = system enforces labels, rigid, government/military. DAC = the data owner decides who gets in, flexible, standard file permissions." },
+  { d: 4, q: "Correlates endpoint, email, cloud, and network telemetry into one detection view", opts: ["XDR", "EDR", "SIEM"], a: 0, tell: "EDR is endpoint only. XDR extends across layers. SIEM aggregates and correlates logs but is not itself a response tool — that's SOAR." },
+  { d: 4, q: "Automates the response playbook after an alert fires", opts: ["SOAR", "SIEM", "UBA"], a: 0, tell: "SIEM collects and alerts. SOAR orchestrates and acts. Look for 'automated response' or 'playbook' in the stem." },
+  { d: 4, q: "The company buys the phones and lets employees use them personally too", opts: ["COPE", "BYOD", "CYOD"], a: 0, tell: "BYOD: employee's own device. COPE: company's device, personal use allowed. CYOD: employee picks from a company-approved list, company still owns it." },
+  { d: 4, q: "A discussion-based walkthrough where the team talks through their roles in a scenario", opts: ["Tabletop exercise", "Simulation", "Failover test"], a: 0, tell: "Tabletop = talking, no systems touched, cheapest. Simulation = actually executing against a mimicked event." },
+  { d: 4, q: "Notice that stops all deletion of data relevant to anticipated litigation", opts: ["Legal hold", "Chain of custody", "Preservation"], a: 0, tell: "Legal hold is the instruction that starts it. Chain of custody is the paperwork tracking evidence handling once collected." },
+  { d: 5, q: "The maximum amount of data loss the business will tolerate, expressed in time", opts: ["RPO", "RTO", "MTTR"], a: 0, tell: "RPO looks backward (how far back is the last good backup — drives backup frequency). RTO looks forward (how fast must we be running again)." },
+  { d: 5, q: "Average time between system failures — a measure of reliability", opts: ["MTBF", "MTTR", "MTTF"], a: 0, tell: "MTBF = between failures (repairable). MTTF = to failure (not repairable, you replace it). MTTR = to repair." },
+  { d: 5, q: "Asset value $200,000, exposure factor 25%, expected twice a year. The ALE?", opts: ["$100,000", "$50,000", "$400,000"], a: 0, tell: "SLE = 200,000 × 0.25 = 50,000. ALE = SLE × ARO = 50,000 × 2 = 100,000. Always compute SLE first." },
+  { d: 5, q: "The broad level of risk an organization is willing to pursue to meet its goals", opts: ["Risk appetite", "Risk tolerance", "Risk threshold"], a: 0, tell: "Appetite is strategic and broad (expansionary/conservative/neutral). Tolerance is the acceptable variance around a specific risk. Threshold is the trigger point for action." },
+  { d: 5, q: "Buying cyber insurance to cover breach costs", opts: ["Transfer", "Accept", "Mitigate"], a: 0, tell: "Transfer moves the financial impact to someone else. Note: you can transfer cost, never accountability." },
+  { d: 5, q: "A formal approval to operate outside a policy for a documented business reason", opts: ["Exemption", "Exception", "Acceptance"], a: 0, tell: "Both fall under Accept. Exemption = formally excused from the requirement. Exception = one instance where the standard control isn't applied." },
+  { d: 5, q: "Document defining 99.9% uptime with financial penalties for missing it", opts: ["SLA", "MOU", "MSA"], a: 0, tell: "SLA has measurable service metrics. MOU states intent without hard numbers. If the question has percentages or response times, it's an SLA." },
+  { d: 5, q: "The umbrella contract setting general terms for all future work with a vendor", opts: ["MSA", "SOW", "BPA"], a: 0, tell: "MSA is the framework signed once. SOW hangs under it and defines one project's deliverables and dates." },
+  { d: 5, q: "GDPR: the entity that decides why and how personal data will be processed", opts: ["Controller", "Processor", "Data subject"], a: 0, tell: "Controller decides. Processor executes on instruction. Data subject is the human the data is about." },
+  { d: 5, q: "Gathering intel from public records and social media without touching the target", opts: ["Passive reconnaissance", "Active reconnaissance"], a: 0, tell: "Passive leaves no trace on the target. The moment you send a packet at them (scan, ping, banner grab), it's active and detectable." },
+  { d: 5, q: "Pen testers are given full network diagrams and credentials before starting", opts: ["Known environment", "Unknown environment", "Partially known"], a: 0, tell: "Known = white box, full info, most efficient. Unknown = black box, simulates a real outside attacker. Partially known = gray box." },
+  { d: 5, q: "A senior manager signs a formal statement that controls are in place as described", opts: ["Attestation", "Assessment", "Audit"], a: 0, tell: "Attestation is the declaration itself. An audit is the independent examination that verifies whether the declaration is true." },
+
+  { d: 6, q: "AAA protocol that uses TCP, encrypts the entire payload, and separates authentication from authorization", opts: ["TACACS+", "RADIUS", "Kerberos"], a: 0, tell: "TACACS+ = TCP 49, full encryption, AAA separated, Cisco-oriented, used for device administration. RADIUS = UDP, encrypts only the password, combines authn/authz, used for network access." },
+  { d: 6, q: "Monitors one server's own files, processes, and logs for intrusion", opts: ["HIDS", "NIDS", "NIPS"], a: 0, tell: "H = host (one machine, sees encrypted traffic after decryption). N = network (whole segment, sees traffic but not what's inside TLS)." },
+  { d: 6, q: "The formatting language for describing cyber threat intelligence", opts: ["STIX", "TAXII", "OSINT"], a: 0, tell: "STIX structures the intel; TAXII transports it between parties. They're almost always mentioned together — know which does which." },
+  { d: 6, q: "One-time password that changes every 30 seconds", opts: ["TOTP", "HOTP", "PSK"], a: 0, tell: "TOTP = time-based, expires on a clock. HOTP = counter-based, stays valid until it's used. 'Rolls automatically' means TOTP." },
+  { d: 6, q: "IPSec component that provides encryption of the payload", opts: ["ESP", "AH", "IKE"], a: 0, tell: "AH gives integrity/authentication but no confidentiality. ESP encrypts. IKE just negotiates the keys beforehand." },
+  { d: 6, q: "Cloud model where you manage the OS, patching, and applications yourself", opts: ["IaaS", "PaaS", "SaaS"], a: 0, tell: "IaaS: you get raw compute, you patch the OS. PaaS: provider handles OS, you deploy code. SaaS: you only manage users and data." },
+  { d: 6, q: "Sits between users and cloud apps to enforce policy and detect shadow IT", opts: ["CASB", "SWG", "DLP"], a: 0, tell: "CASB is cloud-service-aware. SWG filters general web browsing. DLP watches the data itself wherever it moves." },
+  { d: 6, q: "Restores IT systems and infrastructure after an outage", opts: ["DRP", "BCP", "BIA"], a: 0, tell: "DRP is the technical recovery plan. BCP is the wider business plan DRP sits inside. BIA is the analysis that tells you the priorities and the RTO/RPO." },
+  { d: 6, q: "Encryption performed by the drive's own controller with no software involvement", opts: ["SED", "FDE via software", "EFS"], a: 0, tell: "SED is hardware-based and transparent. Software FDE (BitLocker, LUKS) uses the CPU. EFS encrypts individual files within Windows, not the whole disk." },
+  { d: 6, q: "Wireless encryption used by WPA2", opts: ["CCMP (AES)", "TKIP", "SAE"], a: 0, tell: "WEP → RC4 (broken). WPA → TKIP (patch, deprecated). WPA2 → CCMP/AES. WPA3 → SAE handshake with GCMP." },
+  { d: 6, q: "Contracted company that provides security monitoring and SOC services", opts: ["MSSP", "MSP", "CSP"], a: 0, tell: "The extra S is security. MSP = general IT management. CSP = cloud service provider." },
+  { d: 6, q: "Durable adversary behaviors — how a group operates, not what IP it used", opts: ["TTPs", "IoCs", "CVEs"], a: 0, tell: "IoCs are the disposable artifacts (hashes, IPs) an attacker can change in minutes. TTPs are the patterns of behavior that are expensive for them to change." },
+  { d: 6, q: "A scan shows TCP 3389 open to the internet on a file server", opts: ["RDP — high ransomware risk", "SMB — patch immediately", "LDAP — bind anonymously"], a: 0, tell: "3389 = RDP, 445 = SMB, 389 = LDAP. Exposed RDP is one of the most common ransomware entry points; put it behind a VPN or jump server." },
+  { d: 6, q: "Legacy protocol on port 23 found during an internal audit", opts: ["Telnet — replace with SSH", "TFTP — replace with SFTP", "SNMPv1 — upgrade to v3"], a: 0, tell: "23 Telnet → 22 SSH. 69 TFTP → 22 SFTP. 161 SNMPv1/v2c → SNMPv3. Every one of these questions wants the encrypted replacement." },
+];
+
+var DOMAINS=[{n:1,l:"1.0 Concepts"},{n:2,l:"2.0 Threats"},{n:3,l:"3.0 Architecture"},
+{n:4,l:"4.0 Operations"},{n:5,l:"5.0 Governance"},{n:6,l:"6.0 Ports & acronyms"}];
+var KEY="secplus-sy0701-progress";
+var EXAM=new Date("2026-09-01T09:00:00");
+
+var S={mode:"cards", doms:[1,2,3,4,5,6], weak:false, i:0, shown:false, picked:null, r:{}};
+
+/* storage: Claude artifact storage -> localStorage -> memory */
+var store={
+  get:function(k){
+    return new Promise(function(res){
+      try{ if(window.storage&&window.storage.get){
+        window.storage.get(k).then(function(x){res(x&&x.value);},function(){res(lsGet(k));});
+        return;
+      } }catch(e){}
+      res(lsGet(k));
+    });
+  },
+  set:function(k,v){
+    try{ if(window.storage&&window.storage.set){ window.storage.set(k,v).catch(function(){lsSet(k,v);}); return; } }catch(e){}
+    lsSet(k,v);
+  }
+};
+function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+
+var saveT=null;
+function save(){
+  clearTimeout(saveT);
+  saveT=setTimeout(function(){ store.set(KEY, JSON.stringify({ratings:S.r})); },500);
+}
+
+function deck(){
+  var src = S.mode==="cards"?CARDS:PAIRS, p = S.mode==="cards"?"c":"p", out=[];
+  for(var i=0;i<src.length;i++){
+    var it=src[i]; if(S.doms.indexOf(it.d)<0) continue;
+    var id=p+i, rt=S.r[id];
+    if(S.weak && rt!=="shaky" && rt!=="miss") continue;
+    var o={}; for(var k in it) o[k]=it[k]; o.id=id; out.push(o);
+  }
+  return out;
+}
+function weakCount(){ var n=0; for(var k in S.r){ if(S.r[k]==="shaky"||S.r[k]==="miss") n++; } return n; }
+
+function go(d){
+  var dk=deck(); if(!dk.length) return;
+  S.i=(S.i+d+dk.length)%dk.length; S.shown=false; S.picked=null; render();
+  window.scrollTo({top:0,behavior:"auto"});
+}
+function rate(k){
+  var dk=deck(), c=dk[S.i]; if(!c) return;
+  S.r[c.id]=k; save();
+  if(S.weak){ S.shown=false; S.picked=null; var n=deck(); S.i = n.length? S.i % n.length : 0; render(); }
+  else go(1);
+}
+
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+function render(){
+  var dk=deck(), c=dk[S.i];
+  if(S.i>=dk.length){ S.i = dk.length?dk.length-1:0; c=dk[S.i]; }
+
+  document.querySelectorAll(".tab").forEach(function(t){
+    t.setAttribute("data-on", t.dataset.mode===S.mode?"1":"0");
+  });
+
+  /* chips */
+  var ch=document.getElementById("chips"), h="";
+  DOMAINS.forEach(function(d){
+    h+='<button class="chip" data-dom="'+d.n+'" data-on="'+(S.doms.indexOf(d.n)>=0?1:0)+'">'+d.l+'</button>';
+  });
+  h+='<button class="chip" data-weak="1" data-on="'+(S.weak?1:0)+'">&#9733; Weak only ('+weakCount()+')</button>';
+  ch.innerHTML=h;
+
+  /* spine */
+  var sp=document.getElementById("spine"), s="";
+  for(var i=0;i<dk.length;i++){
+    s+='<button class="tick" data-jump="'+i+'" data-r="'+(S.r[dk[i].id]||"")+'" data-cur="'+(i===S.i?1:0)+'"></button>';
+  }
+  sp.innerHTML=s;
+  var rated=0; dk.forEach(function(x){ if(S.r[x.id]) rated++; });
+  document.getElementById("skey").innerHTML=
+    "<span>"+(dk.length?S.i+1:0)+" / "+dk.length+"</span><span>"+rated+" rated</span>";
+
+  var m=document.getElementById("main"), bar=document.getElementById("bar");
+
+  if(!c){
+    m.innerHTML='<div class="empty">Nothing in this deck.<br>'+
+      (S.weak?"Nothing marked shaky or missed yet.":"Turn on at least one domain.")+'</div>';
+    bar.innerHTML=""; return;
+  }
+
+  if(S.mode==="cards"){
+    m.innerHTML='<article class="card">'+
+      '<div class="obj">'+esc(c.o)+'</div>'+
+      '<div class="eyebrow">Objective '+esc(c.o)+'</div>'+
+      '<h2 class="front">'+esc(c.f)+'</h2>'+
+      (S.shown ? '<div class="back">'+esc(c.b)+'</div>'
+               : '<button class="veil" id="veil">Tap to reveal</button>')+
+      '</article>';
+    bar.innerHTML = S.shown
+      ? '<button class="act" data-rate="got">Got it</button>'+
+        '<button class="act" data-rate="shaky">Shaky</button>'+
+        '<button class="act" data-rate="miss">Missed</button>'
+      : '<button class="act" data-nav="-1">&larr;</button>'+
+        '<button class="act" data-k="reveal" data-reveal="1">Reveal</button>'+
+        '<button class="act" data-nav="1">&rarr;</button>';
+    if(S.shown){
+      document.querySelectorAll("[data-rate]").forEach(function(b){ b.setAttribute("data-k", b.dataset.rate); });
+    }
+  } else {
+    var o='<article class="card"><div class="obj">'+c.d+'.0</div>'+
+      '<div class="eyebrow">Which one is it</div>'+
+      '<h2 class="front">'+esc(c.q)+'</h2></article>';
+    c.opts.forEach(function(t,ix){
+      var st=""; if(S.picked!==null){ st = ix===c.a?"right":(ix===S.picked?"wrong":"dim"); }
+      o+='<button class="opt" data-pick="'+ix+'" data-s="'+st+'"'+(S.picked!==null?" disabled":"")+'>'+esc(t)+'</button>';
+    });
+    if(S.picked!==null) o+='<div class="tell"><span>How to tell them apart</span>'+esc(c.tell)+'</div>';
+    m.innerHTML=o;
+    bar.innerHTML='<button class="act" data-nav="-1">&larr;</button>'+
+      '<button class="act" data-nav="1">Next &rarr;</button>';
+  }
+
+  document.getElementById("fcount").textContent=
+    (S.mode==="cards"?CARDS.length:PAIRS.length)+" items";
+}
+
+/* events (delegated) */
+document.addEventListener("click", function(e){
+  var t=e.target.closest("button"); if(!t) return;
+  if(t.dataset.mode){ S.mode=t.dataset.mode; S.i=0; S.shown=false; S.picked=null; return render(); }
+  if(t.dataset.dom){
+    var n=+t.dataset.dom, ix=S.doms.indexOf(n);
+    if(ix>=0){ if(S.doms.length>1) S.doms.splice(ix,1); } else S.doms.push(n);
+    S.i=0; S.shown=false; S.picked=null; return render();
+  }
+  if(t.dataset.weak){ S.weak=!S.weak; S.i=0; S.shown=false; S.picked=null; return render(); }
+  if(t.dataset.jump){ S.i=+t.dataset.jump; S.shown=false; S.picked=null; return render(); }
+  if(t.id==="veil"||t.dataset.reveal){ S.shown=true; return render(); }
+  if(t.dataset.rate) return rate(t.dataset.rate);
+  if(t.dataset.nav) return go(+t.dataset.nav);
+  if(t.dataset.pick!==undefined){
+    var dk=deck(), c=dk[S.i]; S.picked=+t.dataset.pick;
+    S.r[c.id]= (S.picked===c.a)?"got":"miss"; save(); return render();
+  }
+  if(t.id==="reset"){
+    if(confirm("Clear all ratings and start over?")){ S.r={}; S.i=0; save(); render(); }
+  }
+});
+
+/* swipe */
+var sx=0, sy=0;
+document.addEventListener("touchstart", function(e){
+  sx=e.changedTouches[0].clientX; sy=e.changedTouches[0].clientY;
+}, {passive:true});
+document.addEventListener("touchend", function(e){
+  var dx=e.changedTouches[0].clientX-sx, dy=e.changedTouches[0].clientY-sy;
+  if(Math.abs(dx)>60 && Math.abs(dx)>Math.abs(dy)*1.6) go(dx<0?1:-1);
+}, {passive:true});
+
+/* keyboard, for desktop */
+document.addEventListener("keydown", function(e){
+  if(e.key===" "||e.key==="Enter"){ if(S.mode==="cards"&&!S.shown){ e.preventDefault(); S.shown=true; render(); } }
+  else if(e.key==="ArrowRight") go(1);
+  else if(e.key==="ArrowLeft") go(-1);
+  else if(S.mode==="cards"&&S.shown){
+    if(e.key==="1") rate("got"); if(e.key==="2") rate("shaky"); if(e.key==="3") rate("miss");
+  }
+});
+
+/* boot */
+if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(function(){});
+  });
+}
+var d=Math.max(0, Math.ceil((EXAM-new Date())/86400000));
+document.getElementById("days").innerHTML="<b>"+d+"</b> days to exam";
+store.get(KEY).then(function(v){
+  if(v){ try{ S.r=(JSON.parse(v).ratings)||{}; }catch(e){} }
+  render();
+});
+</script>
+</body>
+</html>
