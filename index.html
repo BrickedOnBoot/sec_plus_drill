@@ -442,25 +442,26 @@ var store={
   get:function(k){
     return new Promise(function(res){
       try{ if(window.storage&&window.storage.get){
-        window.storage.get(k).then(function(x){res(x&&x.value);},function(){res(lsGet(k));});
+        window.storage.get(k).then(function(x){ res((x&&x.value) || lsGet(k)); },function(){ res(lsGet(k)); });
         return;
       } }catch(e){}
       res(lsGet(k));
     });
-  },
-  set:function(k,v){
-    try{ if(window.storage&&window.storage.set){ window.storage.set(k,v).catch(function(){lsSet(k,v);}); return; } }catch(e){}
-    lsSet(k,v);
   }
 };
 function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
-function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+function lsSet(k,v){ try{ localStorage.setItem(k,v); return true; }catch(e){ return false; } }
 
-var saveT=null;
+var STORAGE_OK=true;
 function save(){
-  clearTimeout(saveT);
-  saveT=setTimeout(function(){ store.set(KEY, JSON.stringify({ratings:S.r})); },500);
+  var payload=JSON.stringify({ratings:S.r});
+  /* synchronous first: survives an immediate force-quit */
+  STORAGE_OK = lsSet(KEY, payload);
+  try{ if(window.storage&&window.storage.set){ window.storage.set(KEY,payload).catch(function(){}); } }catch(e){}
 }
+/* belt and braces: flush again when the app is backgrounded or closed */
+window.addEventListener("pagehide", save);
+document.addEventListener("visibilitychange", function(){ if(document.hidden) save(); });
 
 function deck(){
   var src = S.mode==="cards"?CARDS:PAIRS, p = S.mode==="cards"?"c":"p", out=[];
@@ -555,7 +556,7 @@ function render(){
   }
 
   document.getElementById("fcount").textContent=
-    (S.mode==="cards"?CARDS.length:PAIRS.length)+" items";
+    (S.mode==="cards"?CARDS.length:PAIRS.length)+" items"+(STORAGE_OK?"":" · SAVING BLOCKED");
 }
 
 /* events (delegated) */
@@ -602,6 +603,7 @@ document.addEventListener("keydown", function(e){
 });
 
 /* boot */
+try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist(); }catch(e){}
 if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
   window.addEventListener('load', function(){
     navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(function(){});
