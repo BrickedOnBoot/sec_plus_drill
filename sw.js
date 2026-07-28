@@ -1,5 +1,6 @@
-/* Caches the app on first visit so it works with no signal. */
-var CACHE = 'secplus-v4';
+/* v5 — network-first for the app itself so updates land immediately,
+   cache-first for static assets, full offline fallback when there's no signal. */
+var CACHE = 'secplus-v5';
 var FILES = ['./', './index.html', './manifest.json', './icon-180.png', './icon-512.png'];
 
 self.addEventListener('install', function (e) {
@@ -15,17 +16,38 @@ self.addEventListener('activate', function (e) {
 });
 
 self.addEventListener('fetch', function (e) {
-  if (e.request.method !== 'GET') return;
+  var req = e.request;
+  if (req.method !== 'GET') return;
+
+  var isApp = req.mode === 'navigate' ||
+              req.destination === 'document' ||
+              /index\.html$/.test(new URL(req.url).pathname);
+
+  if (isApp) {
+    /* try the network first; fall back to cache only when offline */
+    e.respondWith(
+      fetch(req).then(function (res) {
+        var copy = res.clone();
+        caches.open(CACHE).then(function (c) { c.put('./index.html', copy); });
+        return res;
+      }).catch(function () {
+        return caches.match('./index.html').then(function (hit) {
+          return hit || caches.match('./');
+        });
+      })
+    );
+    return;
+  }
+
   e.respondWith(
-    caches.match(e.request).then(function (hit) {
-      if (hit) return hit;
-      return fetch(e.request).then(function (res) {
+    caches.match(req).then(function (hit) {
+      return hit || fetch(req).then(function (res) {
         if (res && res.ok && res.type === 'basic') {
           var copy = res.clone();
-          caches.open(CACHE).then(function (c) { c.put(e.request, copy); });
+          caches.open(CACHE).then(function (c) { c.put(req, copy); });
         }
         return res;
-      }).catch(function () { return caches.match('./index.html'); });
+      });
     })
   );
 });
